@@ -26,7 +26,8 @@ export function rpcJoinRoom(
         // In Nakama, we can list matches to check, but the real join happens via socket
         // For MVP, we do a basic validation
         try {
-            const matches = nk.matchList(1, false, `matchId:${matchId}`);
+            const matches = nk.matchList(100, true, null, null, null, null)
+                .filter((m: any) => m.matchId === matchId);
             if (matches.length === 0) {
                 const response: JoinRoomResponse = {
                     success: false,
