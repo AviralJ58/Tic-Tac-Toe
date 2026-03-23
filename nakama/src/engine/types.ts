@@ -1,44 +1,20 @@
-// Type definitions for Tic-Tac-Toe
-// Per AGENT_INIT.md § 4, core authoritative state model
-
-// Nakama runtime type stub for local development
-// In production, this is provided by Nakama's TypeScript SDK
-declare namespace nkruntime {
-    interface MatchState {
-        [key: string]: any;
-    }
-}
-
 /**
- * A single cell on the 3x3 board
+ * Shared game state and contract types
  */
-export type Cell = "X" | "O" | null;
 
-/**
- * Match status per AGENT_INIT.md § 4
- */
-export type MatchStatus = "waiting" | "in_progress" | "completed" | "abandoned";
+export type Cell = 'X' | 'O' | null;
+export type MatchStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned';
+export type GameMode = 'classic' | 'timed';
+export type GameResult = 'X' | 'O' | 'draw' | null;
 
-/**
- * Game mode, MVP is "classic"
- */
-export type GameMode = "classic" | "timed";
-
-/**
- * A player in the match
- */
 export interface PlayerState {
     userId: string;
     username?: string;
-    symbol: "X" | "O";
+    symbol: 'X' | 'O';
     connected: boolean;
 }
 
-/**
- * Complete authoritative match state
- * Per AGENT_INIT.md § 4, all game logic is server-owned
- */
-export interface MatchGameState extends nkruntime.MatchState {
+export interface MatchGameState {
     matchId: string;
     status: MatchStatus;
     mode: GameMode;
@@ -47,8 +23,8 @@ export interface MatchGameState extends nkruntime.MatchState {
         X?: PlayerState;
         O?: PlayerState;
     };
-    currentTurn: "X" | "O";
-    winner: "X" | "O" | "draw" | null;
+    currentTurn: 'X' | 'O';
+    winner: GameResult;
     moveCount: number;
     createdAt: number;
     updatedAt: number;
@@ -57,26 +33,7 @@ export interface MatchGameState extends nkruntime.MatchState {
 }
 
 /**
- * Opcodes for realtime client-server communication
- * Per AGENT_INIT.md § 8, explicit event protocol
- */
-export enum ClientOpcode {
-    MAKE_MOVE = 1,
-    LEAVE_MATCH = 2
-}
-
-export enum ServerOpcode {
-    STATE_SYNC = 1,
-    ERROR = 2,
-    PLAYER_JOINED = 3,
-    PLAYER_LEFT = 4,
-    GAME_STARTED = 5,
-    GAME_FINISHED = 6,
-    TIMER_UPDATE = 7
-}
-
-/**
- * RPC Request/Response contracts
+ * RPC and realtime message contracts
  */
 
 export interface CreateRoomRequest {
@@ -117,8 +74,22 @@ export interface JoinRoomResponse {
 }
 
 /**
- * Realtime message payloads
+ * Realtime message opcodes and payloads
  */
+
+export enum OpCodeClientToServer {
+    MAKE_MOVE = 1,
+    LEAVE_MATCH = 2,
+}
+
+export enum OpCodeServerToClient {
+    STATE_SYNC = 1,
+    ERROR = 2,
+    PLAYER_JOINED = 3,
+    PLAYER_LEFT = 4,
+    GAME_STARTED = 5,
+    GAME_FINISHED = 6,
+}
 
 export interface MakeMovePayload {
     position: number; // 0-8
@@ -130,7 +101,7 @@ export interface StateSyncPayload {
     board: Cell[];
     players: Record<string, PlayerState>;
     currentTurn: 'X' | 'O';
-    winner?: 'X' | 'O' | 'draw' | null;
+    winner?: GameResult;
     moveCount: number;
 }
 
@@ -145,6 +116,6 @@ export interface PlayerJoinedPayload {
 }
 
 export interface GameFinishedPayload {
-    winner: 'X' | 'O' | 'draw' | null;
+    winner: GameResult;
     board: Cell[];
 }

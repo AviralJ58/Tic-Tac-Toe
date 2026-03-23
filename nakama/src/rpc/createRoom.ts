@@ -1,5 +1,7 @@
 // Create room RPC
-// Per AGENT_INIT.md § 7, creates a new match room in "waiting" status
+// Per AGENT_INIT.md § 7, creates a new authoritative match room in "waiting" status
+
+import { CreateRoomRequest, CreateRoomResponse } from '../types';
 
 export function rpcCreateRoom(
     ctx: nkruntime.Context,
@@ -8,16 +10,35 @@ export function rpcCreateRoom(
     payload: string
 ): string {
     try {
-        // Placeholder: Parse payload, validate user, create match
-        // TODO: Implement match creation with createMatch()
+        const request: CreateRoomRequest = JSON.parse(payload);
+        const roomName = request.roomName || `Game by ${(ctx.userId || 'Unknown').substring(0, 8)}`;
+        const mode = request.mode || 'classic';
+        const visibility = request.visibility || 'public';
 
-        const response = {
-            success: false,
-            message: 'Not yet implemented'
+        // Create authoritative match with labels for filtering
+        const matchId = nk.matchCreate('tic_tac_toe', {
+            mode,
+            visibility,
+            createdBy: ctx.userId,
+            roomName,
+            status: 'waiting',
+            createdAt: Date.now()
+            // Label helps with filtering/listing
+        });
+
+        logger.info(`Created match ${matchId}: "${roomName}" (${mode}, ${visibility})`);
+
+        const response: CreateRoomResponse = {
+            success: true,
+            matchId
         };
         return JSON.stringify(response);
     } catch (error) {
         logger.error('Error in createRoom: ' + error);
-        return JSON.stringify({ success: false, error: String(error) });
+        const response: CreateRoomResponse = {
+            success: false,
+            error: String(error)
+        };
+        return JSON.stringify(response);
     }
 }
