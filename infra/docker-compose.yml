@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tictactoe-postgres
+    environment:
+      POSTGRES_USER: nakama
+      POSTGRES_PASSWORD: localpassword
+      POSTGRES_DB: nakama
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nakama -d nakama"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nakama:
+    image: heroiclabs/nakama:3.17.1
+    container_name: tictactoe-nakama
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - "/bin/sh"
+      - "-ecx"
+      - >
+        /nakama/nakama migrate up --database.address nakama:localpassword@postgres:5432/nakama &&
+        exec /nakama/nakama
+        --name nakama
+        --database.address nakama:localpassword@postgres:5432/nakama
+        --logger.level info
+        --session.token_expiry_sec 7200
+    volumes:
+      - ../nakama/dist:/nakama/data/modules
+    ports:
+      - "7350:7350"
+      - "7349:7349"
+      - "7351:7351"
+
+volumes:
+  postgres_data:

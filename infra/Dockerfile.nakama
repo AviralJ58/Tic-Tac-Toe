@@ -1,0 +1,9 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY ../../nakama/package.json ./
+COPY ../../nakama/tsconfig.json ./
+COPY ../../nakama/src ./src
+RUN npm install && npm run build
+
+FROM heroiclabs/nakama:3.17.1
+COPY --from=builder /app/dist /nakama/data/modules
