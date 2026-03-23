@@ -15,6 +15,7 @@ import {
 import { rpcCreateRoom } from './rpc/createRoom';
 import { rpcListRooms } from './rpc/listRooms';
 import { rpcJoinRoom } from './rpc/joinRoom';
+import { rpcFindOrCreateMatch } from './rpc/findOrCreateMatch';
 
 /**
  * InitModule: Nakama entry point called at runtime startup.
@@ -46,6 +47,9 @@ export function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk:
 
     initializer.registerRpc('joinRoom', rpcJoinRoom);
     logger.info('[InitModule] ✓ RPC "joinRoom" registered');
+
+    initializer.registerRpc('findOrCreateMatch', rpcFindOrCreateMatch);
+    logger.info('[InitModule] ✓ RPC "findOrCreateMatch" registered');
 
     logger.info('[InitModule] Tic-Tac-Toe runtime module initialized successfully');
   } catch (error) {
