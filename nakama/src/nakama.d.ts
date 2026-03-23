@@ -4,6 +4,7 @@
 declare namespace nkruntime {
     interface Context {
         matchId: string;
+        userId?: string;
         [key: string]: any;
     }
 
@@ -17,7 +18,7 @@ declare namespace nkruntime {
     interface Nakama {
         matchCreate(moduleName: string, params?: any): string;
         matchJoin(matchId: string, userId: string): void;
-        matchList(limit: number, authoritative?: boolean, label?: string): any[];
+        matchList(limit: number, authoritative?: boolean, label?: string | null, minSize?: number | null, maxSize?: number | null, query?: string | null): Match[];
         [key: string]: any;
     }
 
@@ -45,8 +46,17 @@ declare namespace nkruntime {
     }
 
     interface MatchDispatcher {
-        broadcastMessage(opCode: number, data: any): void;
+        broadcastMessage(opCode: number, data: string | any): void;
         matchLabelUpdate(label: string): void;
+        [key: string]: any;
+    }
+
+    interface Match {
+        matchId: string;
+        authoritative: boolean;
+        label: string;
+        size: number;
+        properties?: { [key: string]: any };
         [key: string]: any;
     }
 
@@ -107,4 +117,14 @@ declare namespace nkruntime {
         state: MatchState,
         graceSeconds: number
     ) => { state: MatchState };
+
+    type MatchSignalFunction = (
+        ctx: Context,
+        logger: Logger,
+        nk: Nakama,
+        dispatcher: MatchDispatcher,
+        tick: number,
+        state: MatchState,
+        data: string
+    ) => { state: MatchState; responseMessage?: string };
 }

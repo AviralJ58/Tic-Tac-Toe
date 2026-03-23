@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "description": "Nakama TypeScript runtime for Tic-Tac-Toe server authoritative match",
   "scripts": {
-    "build": "tsc --outDir dist",
+    "build": "node build.js",
     "clean": "rm -rf dist",
-    "watch": "tsc --outDir dist --watch"
+    "watch": "node build.js --watch",
+    "test": "tsc src/__tests__/engine.test.ts --outDir dist/tests && node dist/tests/__tests__/engine.test.js",
+    "test:ts": "ts-node src/__tests__/engine.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "esbuild": "^0.25.0",
     "typescript": "^5.5.0"
   }
 }
