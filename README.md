@@ -1,152 +1,99 @@
 # Multiplayer Tic-Tac-Toe with Nakama
 
-Production-ready multiplayer Tic-Tac-Toe built with React, TypeScript, Vite, and Nakama authoritative match server.
+![Home Screen](docs/images/home.png)
+![Gameplay Screenshot](docs/images/gameplay.png)
 
-## Quick Start
+A production-ready, server-authoritative multiplayer Tic-Tac-Toe game. Built with React, TypeScript, Vite, and the Heroic Labs Nakama authoritative match server.
 
-### 1. Backend Setup
+## Overview
+
+This project implements a fully secure, scalable multiplayer ecosystem. Instead of clients talking directly to each other or blindly trusting local game logic, the Nakama server acts as the absolute source of truth. Clients submit moves, and the server validates them, updates the board, calculates win/loss conditions, and broadcasts the new state.
+
+### Key Features
+- **Server-Authoritative Gameplay:** Fraud-proof match validation. Clients cannot cheat.
+- **Matchmaking & Lobbies:** Instant "Quick Match" functionality, plus the ability to create and join custom Public Rooms.
+- **Game Modes:** 
+  - *Classic:* Standard turn-based play.
+  - *Timed:* A fast-paced mode where each player has 30 seconds per turn. If the timer zeroes out, the player automatically forfeits.
+- **Persistent Player Profiles:** Tracks total Games Played, Wins, Losses, Draws, and Win Streaks stored securely in Nakama's NoSQL storage.
+- **Global Leaderboards:** Competitive points system (Win = 3pts, Draw = 1pt). Ranks top players per mode.
+- **Robust Connection Handling:** Graceful disconnects, match forfeitures, and auto-cleanup.
+
+![Lobby & Profile Screenshot](docs/images/lobby-profile.png)
+![Result Screen](docs/images/result.png)
+
+## Tech Stack
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, Zustand, Nakama JS SDK.
+- **Backend:** Nakama (Go-based server), Nakama TypeScript Runtime, PostgreSQL.
+- **Infrastructure:** Docker & Docker Compose.
+
+## Architecture Summary
+![Architecture Diagram](docs/images/architecture.png)
+
+The server employs the **Nakama TypeScript Runtime** API to inject custom logic into the matchmaking pool. 
+- **Match Handler Lifecycle:** The server implements Nakama's `MatchProvider` interface (`matchInit`, `matchJoinAttempt`, `matchJoin`, `matchLeave`, `matchLoop`, `matchTerminate`).
+- **Tick Engine:** The game runs at a fixed server tick rate (e.g. 1 tick per second), constantly evaluating state, polling timeouts, and broadcasting synchronized `STATE_SYNC` payloads to local clients.
+- **Stat Persistence:** Upon match finish, the server (not the client) evaluates the result, uses `nk.storageWrite` to update profiles securely (read-only for clients), and bumps the leaderboard via `nk.leaderboardRecordWrite`.
+
+For detailed documentation, please refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
+
+## Local Setup
+
+### Prerequisites
+- Node.js (v18+)
+- Docker & Docker Compose
+
+### 1. Start Server Infrastructure (Nakama + PostgreSQL)
+```bash
+cd infra
+docker compose up -d
+```
+Nakama will be accessible at `http://localhost:7350` (API) and `http://localhost:7351` (Console - admin:password).
+
+### 2. Build Backend Runtime Modules
+The Nakama server hot-mounts logic from `/nakama/dist/`. You must compile the TypeScript backend logic for the server to recognize the rules:
 ```bash
 cd nakama
 npm install
 npm run build
 ```
+*(If you make changes to `/nakama/src`, run `npm run build` again and restart the docker container).*
 
-### 2. Start Local Infrastructure
-```bash
-cd infra
-docker compose up -d
-```
-This starts PostgreSQL and Nakama. The compiled backend modules are automatically mounted at `/nakama/data/modules`.
-
-### 3. Frontend Setup
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+Open `http://localhost:5173/` in your browser.
 
----
+## How It Works
 
-## Backend Development Workflow
+### Matchmaking Flow & RPCs
+Players enter the lobby and can interact via 3 distinct Remote Procedure Calls (RPCs):
+1. **`findOrCreateMatch` (Quick Match):** The server privately scans active matchmaking pools. If a public/quick match hasn't started, the server provisions one securely under the hood, tagging it with `visibility: 'quick'` to prevent it from cluttering the public room list.
+2. **`createRoom`:** The server spins up a custom room, explicitly tagging it with `visibility: 'public'`.
+3. **`listRooms` + `joinRoom`:** Public rooms are broadcast via the `listRooms` endpoint to all connected clients in the Lobby. Players then submit a join attempt via `joinRoom`, which the server validates strictly for capacity.
 
-The backend is a **Nakama TypeScript runtime** — server-authoritative match logic runs inside the Nakama container.
+### Timed Mode
+When a Timed match is initialized, the server tracks an internal `turnDeadline` timestamp. During the `matchLoop` tick execution, the server checks if `Date.now() > state.turnDeadline`. If true, the active player forcefully forfeits the game.
 
-### Source Structure
-- `nakama/src/types/` — Type definitions (game state, opcodes, player state)
-- `nakama/src/engine/` — Pure game logic (board, rules, validation)
-- `nakama/src/match/` — Nakama match handler (orchestration, lifecycle)
-- `nakama/src/rpc/` — Remote procedure calls (room creation, listing, joining)
+### Leaderboard / Stats
+Profiles and Leaderboards are strictly protected from client manipulation. 
+When the match concludes, the backend script triggers a helper function that securely modifies the Nakama Storage Collection (`stats`) using an escalated server-only write privilege. The same occurs for the global Incremental Leaderboard.
 
-### Build Process
-```bash
-cd nakama
-npm run build           # Compiles TypeScript → dist/
-npm run watch          # Watch mode for development
-npm run clean          # Remove dist/
-```
+## Manual Testing Guide
+1. Launch the frontend and open two separate Incognito windows side-by-side.
+2. Enter two different nicknames (e.g., "Player A" and "Player B").
+3. Have "Player A" click **Create Room**. 
+4. Have "Player B" wait in the lobby. The room will appear dynamically (via automatic polling or manual refresh). Click **Join**.
+5. Disconnect testing: Close Player A's tab mid-game. Player B's UI should immediately announce Player A forfeited via disconnect.
 
-**Output:** `nakama/dist/` contains compiled JavaScript ready for Nakama runtime.
+For detailed testing instructions, please refer to the [Testing Documentation](docs/TESTING.md).
 
-### Module Loading
-The `infra/docker-compose.yml` mounts `nakama/dist` to `/nakama/data/modules` in the Nakama container:
-```yaml
-volumes:
-  - ../nakama/dist:/nakama/data/modules
-```
+## Deployment Overview
+- **Database:** A managed PostgreSQL instance (e.g., Supabase, RDS).
+- **Backend:** Nakama requires a persistent server. Deploy via Docker Compose on a VPS (DigitalOcean/AWS EC2), or via managed Kubernetes. Ports `7350` and `7351` must be exposed.
+- **Frontend:** Can be deployed as a static site generated via `npm run build` on any CDN like Vercel, Netlify, or Cloudflare Pages.
 
-Nakama automatically loads modules from this directory on startup.
-
-### Local Development Cycle
-1. Edit TypeScript source in `nakama/src/`
-2. Run `npm run build` (or use `npm run watch`)
-3. Restart Nakama: `docker compose restart tictactoe-nakama`
-4. Check logs: `docker logs -f tictactoe-nakama`
-
-### Match Handler Interface
-Located in `nakama/src/match/ticTacToeMatch.ts`:
-- `matchInit` — Initialize match state
-- `matchJoinAttempt` — Validate join requests
-- `matchJoin` — Handle successful joins
-- `matchLeave` — Handle disconnects
-- `matchLoop` — Main game tick
-- `matchTerminate` — Cleanup
-
-### Pure Engine Functions
-Testable, side-effect-free game logic in `nakama/src/engine/`:
-- `board.ts` — Move validation, board manipulation
-- `rules.ts` — Win detection, draw detection, turn logic
-
-### RPCs
-Room management endpoints in `nakama/src/rpc/`:
-- `createRoom` — Create a new match
-- `listRooms` — List available rooms
-- `joinRoom` — Join an existing match
-
----
-
-## Architecture
-
-Per `AGENT_INIT.md`:
-- **Server-authoritative** — All game logic runs on Nakama
-- **Thin client** — Frontend sends moves, renders confirmed state only
-- **One match per game** — Isolated state per match session
-- **Explicit opcodes** — Fixed protocol for client-server communication
-- **Pure engine** — Game logic separated from I/O orchestration
-
----
-
-## Directory Structure
-```
-.
-├── frontend/           # React + Vite UI
-├── nakama/            # Nakama TypeScript runtime
-│   ├── src/
-│   │   ├── index.ts                    # Entry point, module registration
-│   │   ├── match/ticTacToeMatch.ts     # Match handler (all 6 callbacks)
-│   │   ├── engine/                     # Pure game logic
-│   │   │   ├── board.ts                # Board manipulation
-│   │   │   └── rules.ts                # Win/draw/turn logic
-│   │   ├── rpc/                        # Room management
-│   │   │   ├── createRoom.ts
-│   │   │   ├── listRooms.ts
-│   │   │   └── joinRoom.ts
-│   │   └── types/index.ts              # Type definitions
-│   ├── dist/                           # Compiled JS (generated by npm run build)
-│   ├── package.json
-│   └── tsconfig.json
-├── infra/             # Local dev infrastructure
-│   ├── docker-compose.yml              # PostgreSQL + Nakama
-│   └── nakama.yml                      # Nakama config (if needed)
-├── AGENT_INIT.md      # Architecture source of truth
-└── README.md
-```
-
----
-
-## Environment
-
-Default values (override via `.env`):
-```env
-POSTGRES_USER=nakama
-POSTGRES_PASSWORD=localpassword
-POSTGRES_DB=nakama
-POSTGRES_PORT=5432
-NAKAMA_PORT=7350
-NAKAMA_GRPC_PORT=7349
-NAKAMA_LOG_LEVEL=info
-```
-
----
-
-## Next Steps (Future Implementation)
-
-1. Implement game engine in match handler (`matchJoin`, `matchLoop`, `matchTerminate`)
-2. Add player role assignment (X/O) on join
-3. Process `MAKE_MOVE` messages, validate moves
-4. Broadcast state updates to all players
-5. Handle disconnect grace periods
-6. Implement room RPCs (create, list, join) with match creation
-7. Add frontend Nakama client and socket connection
-8. Test 2-player gameplay end-to-end
-
-See `AGENT_INIT.md` for full architecture and design.
+For detailed deployment instructions, please refer to the [Deployment Documentation](docs/DEPLOYMENT.md).

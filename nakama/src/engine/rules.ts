@@ -1,5 +1,5 @@
 // Pure game rule functions
-// Per AGENT_INIT.md § 3, these validate game state and determine outcomes
+// These validate game state and determine outcomes
 
 import { Cell } from '../types';
 

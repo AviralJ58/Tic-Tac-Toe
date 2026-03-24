@@ -1,5 +1,5 @@
 // Join room RPC
-// Per AGENT_INIT.md § 6, validates join possibility
+// Validates join possibility
 // Note: Actual match join happens via socket matchJoin, after this RPC succeeds
 
 import { JoinRoomRequest, JoinRoomResponse } from '../types';

@@ -1,5 +1,5 @@
 // Type definitions for Tic-Tac-Toe
-// Per AGENT_INIT.md § 4, core authoritative state model
+// Core authoritative state model
 
 // Nakama runtime type stub for local development
 // In production, this is provided by Nakama's TypeScript SDK
@@ -15,7 +15,7 @@ declare namespace nkruntime {
 export type Cell = "X" | "O" | null;
 
 /**
- * Match status per AGENT_INIT.md § 4
+ * Match status
  */
 export type MatchStatus = "waiting" | "in_progress" | "completed" | "abandoned";
 
@@ -36,7 +36,7 @@ export interface PlayerState {
 
 /**
  * Complete authoritative match state
- * Per AGENT_INIT.md § 4, all game logic is server-owned
+ * All game logic is server-owned
  */
 export interface MatchGameState extends nkruntime.MatchState {
     matchId: string;
@@ -68,7 +68,7 @@ export interface PlayerStats {
 
 /**
  * Opcodes for realtime client-server communication
- * Per AGENT_INIT.md § 8, explicit event protocol
+ * Explicit event protocol
  */
 export enum ClientOpcode {
     MAKE_MOVE = 1,

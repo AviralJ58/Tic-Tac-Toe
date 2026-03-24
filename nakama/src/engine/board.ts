@@ -1,5 +1,5 @@
 // Pure game engine functions for board manipulation
-// Per AGENT_INIT.md § 3, these are testable functions with no side effects
+// These are testable functions with no side effects
 
 import { Cell } from '../types';
 

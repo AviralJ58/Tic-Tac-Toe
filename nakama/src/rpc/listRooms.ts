@@ -1,5 +1,5 @@
 // List rooms RPC
-// Per AGENT_INIT.md § 7, lists available rooms for joining
+// Lists available rooms for joining
 
 import { ListRoomsResponse, WaitingRoom } from '../types';
 

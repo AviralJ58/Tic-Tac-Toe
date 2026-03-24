@@ -1,5 +1,5 @@
 // Create room RPC
-// Per AGENT_INIT.md § 7, creates a new authoritative match room in "waiting" status
+// Creates a new authoritative match room in "waiting" status
 
 import { CreateRoomRequest, CreateRoomResponse } from '../types';
 

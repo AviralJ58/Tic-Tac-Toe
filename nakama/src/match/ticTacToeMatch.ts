@@ -1,5 +1,5 @@
 // Tic-Tac-Toe authoritative match handler
-// Implements Nakama MatchHandler interface per AGENT_INIT.md § 5-6
+// Implements Nakama MatchHandler interface
 // Orchestrates authoritative state, delegates pure logic to engine functions
 
 import { MatchGameState, PlayerState, ClientOpcode, ServerOpcode, StateSyncPayload, GameFinishedPayload, MakeMovePayload, PlayerStats } from '../types';
@@ -8,7 +8,7 @@ import * as rulesEngine from '../engine/rules';
 
 /**
  * matchInit: Initialize match state when a new match is created.
- * Per AGENT_INIT.md, matches start in "waiting" status.
+ * Matches start in "waiting" status.
  */
 export const matchInit: nkruntime.MatchInitFunction = function (
     ctx: nkruntime.Context,

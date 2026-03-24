@@ -1,5 +1,5 @@
 // Tic-Tac-Toe Nakama runtime module
-// Authoritative match server per AGENT_INIT.md
+// Authoritative match server
 // Imports modular game logic (engine, match handlers, RPC handlers)
 
 import {
@@ -20,7 +20,7 @@ import { rpcFindOrCreateMatch } from './rpc/findOrCreateMatch';
 /**
  * InitModule: Nakama entry point called at runtime startup.
  * Registers match handler and RPC endpoints.
- * Per AGENT_INIT.md § 2, this is the single initialization point.
+ * This is the single initialization point.
  */
 export function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer): void {
   logger.info('[InitModule] Starting Tic-Tac-Toe runtime module');
