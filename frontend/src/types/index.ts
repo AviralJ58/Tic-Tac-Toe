@@ -38,6 +38,8 @@ export interface StateSyncPayload {
   currentTurn: PlayerSymbol;
   winner?: PlayerSymbol | 'draw' | null;
   moveCount: number;
+  mode: GameMode;
+  turnDeadlineMs?: number;
 }
 
 export interface GameFinishedPayload {

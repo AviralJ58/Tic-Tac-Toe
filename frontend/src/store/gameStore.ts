@@ -32,6 +32,8 @@ interface GameStore {
   winner: PlayerSymbol | 'draw' | null;
   status: MatchStatus;
   moveCount: number;
+  mode: import('../types').GameMode;
+  turnDeadlineMs: number | null;
 
   // Apply server state sync
   updateFromStateSync: (payload: StateSyncPayload) => void;
@@ -56,6 +58,8 @@ const initialMatchState = {
   winner: null,
   status: 'waiting' as MatchStatus,
   moveCount: 0,
+  mode: 'classic' as import('../types').GameMode,
+  turnDeadlineMs: null as number | null,
   isLoading: false,
 };
 
@@ -107,6 +111,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       winner: payload.winner ?? null,
       status: payload.status,
       moveCount: payload.moveCount,
+      mode: payload.mode,
+      turnDeadlineMs: payload.turnDeadlineMs ?? null,
       playerSymbol,
       screen,
     });

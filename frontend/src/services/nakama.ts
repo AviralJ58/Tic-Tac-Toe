@@ -122,10 +122,10 @@ export async function connectSocket(): Promise<void> {
 }
 
 /** Find or create a match via server-side RPC (Quick Match logic) */
-export async function findMatch(nickname: string): Promise<string> {
+export async function findMatch(nickname: string, mode: import('../types').GameMode = 'classic'): Promise<string> {
   if (!session || !client) throw new Error('Not authenticated');
 
-  const rpcResponse = await client.rpc(session, 'findOrCreateMatch', { nickname });
+  const rpcResponse = await client.rpc(session, 'findOrCreateMatch', { nickname, mode });
   
   let result: CreateRoomResponse;
   if (typeof rpcResponse.payload === 'string') {
@@ -163,10 +163,10 @@ export async function listRooms(): Promise<import('../types').WaitingRoom[]> {
 }
 
 /** Create a match manually via server-side RPC */
-export async function createRoom(roomName: string): Promise<string> {
+export async function createRoom(roomName: string, mode: import('../types').GameMode = 'classic'): Promise<string> {
   if (!session || !client) throw new Error('Not authenticated');
 
-  const rpcResponse = await client.rpc(session, 'createRoom', { roomName });
+  const rpcResponse = await client.rpc(session, 'createRoom', { roomName, mode });
   
   let result: CreateRoomResponse;
   if (typeof rpcResponse.payload === 'string') {

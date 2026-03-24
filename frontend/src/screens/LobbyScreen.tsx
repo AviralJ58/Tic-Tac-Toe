@@ -7,6 +7,7 @@ export default function LobbyScreen() {
   const [rooms, setRooms] = useState<WaitingRoom[]>([]);
   const [busy, setBusy] = useState(false);
   const [loadingRooms, setLoadingRooms] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<import('../types').GameMode>('classic');
   
   const nickname = useGameStore((s) => s.nickname);
   const setScreen = useGameStore((s) => s.setScreen);
@@ -35,7 +36,7 @@ export default function LobbyScreen() {
     setError(null);
     try {
       setScreen('finding');
-      const matchId = await findMatch(nickname);
+      const matchId = await findMatch(nickname, selectedMode);
       await joinMatch(matchId);
     } catch (err: any) {
       console.error('[LobbyScreen] Quick match error:', err);
@@ -44,7 +45,7 @@ export default function LobbyScreen() {
     } finally {
       setBusy(false);
     }
-  }, [nickname, setScreen, setError]);
+  }, [nickname, selectedMode, setScreen, setError]);
 
   const handleCreateRoom = useCallback(async () => {
     setBusy(true);
@@ -52,7 +53,7 @@ export default function LobbyScreen() {
     try {
       setScreen('finding');
       const roomName = `${nickname}'s Game`;
-      const matchId = await createRoom(roomName);
+      const matchId = await createRoom(roomName, selectedMode);
       await joinMatch(matchId);
     } catch (err: any) {
       console.error('[LobbyScreen] Create room error:', err);
@@ -61,7 +62,7 @@ export default function LobbyScreen() {
     } finally {
       setBusy(false);
     }
-  }, [nickname, setScreen, setError]);
+  }, [nickname, selectedMode, setScreen, setError]);
 
   const handleJoinRoom = useCallback(async (matchId: string) => {
     setBusy(true);
@@ -112,6 +113,32 @@ export default function LobbyScreen() {
             {error}
           </div>
         )}
+
+        {/* Mode Selector */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-white/5 p-1 rounded-full flex gap-1">
+            <button
+              onClick={() => setSelectedMode('classic')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                selectedMode === 'classic' 
+                  ? 'bg-brand-500 text-white shadow-lg' 
+                  : 'text-white/40 hover:text-white/80 hover:bg-white/5'
+              }`}
+            >
+              Classic
+            </button>
+            <button
+              onClick={() => setSelectedMode('timed')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                selectedMode === 'timed' 
+                  ? 'bg-brand-500 text-white shadow-lg' 
+                  : 'text-white/40 hover:text-white/80 hover:bg-white/5'
+              }`}
+            >
+              Timed (30s)
+            </button>
+          </div>
+        </div>
 
         {/* Primary actions */}
         <div className="grid grid-cols-2 gap-4">

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { sendMove, leaveMatch } from '../services/nakama';
 import Board from '../components/Board';
@@ -12,10 +12,30 @@ export default function GameScreen() {
   const error = useGameStore((s) => s.error);
   const resetMatch = useGameStore((s) => s.resetMatch);
   const setScreen = useGameStore((s) => s.setScreen);
+  const mode = useGameStore((s) => s.mode);
+  const turnDeadlineMs = useGameStore((s) => s.turnDeadlineMs);
   const [leaving, setLeaving] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const isMyTurn = currentTurn === playerSymbol;
   const isGameActive = status === 'in_progress';
+
+  useEffect(() => {
+    if (mode !== 'timed' || !isGameActive || !turnDeadlineMs) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((turnDeadlineMs - Date.now()) / 1000));
+      setTimeLeft(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 500);
+
+    return () => clearInterval(interval);
+  }, [mode, isGameActive, turnDeadlineMs]);
 
   const playerX = players['X'];
   const playerO = players['O'];
@@ -52,12 +72,17 @@ export default function GameScreen() {
           />
         </div>
 
-        {/* Turn status */}
-        <div className="text-center">
+        {/* Turn status & Timer */}
+        <div className="text-center space-y-2">
           {isGameActive && (
             <p className={`text-sm font-medium ${isMyTurn ? 'text-brand-400' : 'text-white/40'}`}>
               {isMyTurn ? 'Your turn!' : "Opponent's turn..."}
             </p>
+          )}
+          {mode === 'timed' && isGameActive && timeLeft !== null && (
+            <div className={`text-2xl font-black font-mono tracking-wider ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-white/80'}`}>
+              00:{timeLeft.toString().padStart(2, '0')}
+            </div>
           )}
         </div>
 
