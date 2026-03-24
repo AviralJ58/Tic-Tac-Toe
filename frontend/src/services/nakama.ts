@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 // Centralized Nakama service layer
 // All Nakama client/socket logic lives here — no Nakama imports in components
 
@@ -5,10 +7,11 @@ import { Client, Session, Socket } from '@heroiclabs/nakama-js';
 import { CreateRoomResponse, ClientOpcode, ServerOpcode, StateSyncPayload, GameFinishedPayload, ErrorPayload } from '../types';
 import { useGameStore } from '../store/gameStore';
 
-const NAKAMA_HOST = '127.0.0.1';
-const NAKAMA_PORT = '7350';
-const NAKAMA_USE_SSL = false;
-const NAKAMA_SERVER_KEY = 'defaultkey';
+// Fallback to localhost if environment variables are not supplied
+const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || '127.0.0.1';
+const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '7350';
+const NAKAMA_USE_SSL = import.meta.env.VITE_NAKAMA_USE_SSL === 'true';
+const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'defaultkey';
 
 const DEVICE_ID_KEY = 'ttt_device_id';
 const SESSION_TOKEN_KEY = 'ttt_session_token';
