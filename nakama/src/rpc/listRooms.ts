@@ -35,7 +35,7 @@ export function rpcListRooms(
                     status: labelProps.status || match.properties?.status || 'waiting'
                 };
             })
-            .filter((room: any) => room.status === 'waiting');
+            .filter((room: any) => room.status === 'waiting' && room.visibility === 'public');
 
         logger.info(`Listed ${rooms.length} waiting rooms`);
 

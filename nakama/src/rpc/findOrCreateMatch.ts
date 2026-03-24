@@ -33,7 +33,7 @@ export function rpcFindOrCreateMatch(
             const status = labelProps.status || 'unknown';
             const size = match.size || 0;
 
-            if (status === 'waiting' && size < 2 && labelProps.mode === mode) {
+            if (status === 'waiting' && size < 2 && labelProps.mode === mode && labelProps.visibility === 'quick') {
                 logger.info(`[findOrCreateMatch] Found waiting match ${match.matchId} (${size} players), assigning to ${ctx.userId}`);
                 const response: CreateRoomResponse = {
                     success: true,
@@ -46,7 +46,7 @@ export function rpcFindOrCreateMatch(
         // No waiting room found — create a new one
         const matchId = nk.matchCreate('tic_tac_toe', {
             mode,
-            visibility: 'public',
+            visibility: 'quick',
             createdBy: ctx.userId,
             roomName: `${nickname}'s Game`,
             status: 'waiting',
