@@ -132,6 +132,8 @@ export interface StateSyncPayload {
     currentTurn: 'X' | 'O';
     winner?: 'X' | 'O' | 'draw' | null;
     moveCount: number;
+    mode: 'classic' | 'timed';
+    turnDeadlineMs?: number;
 }
 
 export interface ErrorPayload {

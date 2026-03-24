@@ -6,6 +6,7 @@ import { CreateRoomResponse } from '../types';
 
 interface FindOrCreateRequest {
     nickname?: string;
+    mode?: 'classic' | 'timed';
 }
 
 export function rpcFindOrCreateMatch(
@@ -17,6 +18,7 @@ export function rpcFindOrCreateMatch(
     try {
         const request: FindOrCreateRequest = payload ? JSON.parse(payload) : {};
         const nickname = request.nickname || `Player-${(ctx.userId || '').substring(0, 6)}`;
+        const mode = request.mode === 'timed' ? 'timed' : 'classic';
 
         // List all authoritative matches
         const matches = nk.matchList(100, true, null, null, null, null);
@@ -31,7 +33,7 @@ export function rpcFindOrCreateMatch(
             const status = labelProps.status || 'unknown';
             const size = match.size || 0;
 
-            if (status === 'waiting' && size < 2) {
+            if (status === 'waiting' && size < 2 && labelProps.mode === mode) {
                 logger.info(`[findOrCreateMatch] Found waiting match ${match.matchId} (${size} players), assigning to ${ctx.userId}`);
                 const response: CreateRoomResponse = {
                     success: true,
@@ -43,7 +45,7 @@ export function rpcFindOrCreateMatch(
 
         // No waiting room found — create a new one
         const matchId = nk.matchCreate('tic_tac_toe', {
-            mode: 'classic',
+            mode,
             visibility: 'public',
             createdBy: ctx.userId,
             roomName: `${nickname}'s Game`,
