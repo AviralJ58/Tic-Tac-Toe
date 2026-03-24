@@ -54,6 +54,16 @@ export interface MatchGameState extends nkruntime.MatchState {
     updatedAt: number;
     turnStartedAt?: number;
     turnDeadlineMs?: number;
+    statsRecorded?: boolean;
+}
+
+export interface PlayerStats {
+    wins: number;
+    losses: number;
+    draws: number;
+    gamesPlayed: number;
+    currentStreak: number;
+    bestStreak: number;
 }
 
 /**

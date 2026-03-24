@@ -51,6 +51,16 @@ export function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk:
     initializer.registerRpc('findOrCreateMatch', rpcFindOrCreateMatch);
     logger.info('[InitModule] ✓ RPC "findOrCreateMatch" registered');
 
+    // Initialize leaderboards
+    const sortOrder = 'desc';
+    const operator = 'incr';
+    
+    nk.leaderboardCreate('tictactoe_classic', true, sortOrder, operator, null, { mode: 'classic' });
+    logger.info('[InitModule] ✓ Leaderboard "tictactoe_classic" created');
+
+    nk.leaderboardCreate('tictactoe_timed', true, sortOrder, operator, null, { mode: 'timed' });
+    logger.info('[InitModule] ✓ Leaderboard "tictactoe_timed" created');
+
     logger.info('[InitModule] Tic-Tac-Toe runtime module initialized successfully');
   } catch (error) {
     logger.error(`[InitModule] Failed to initialize: ${error}`);

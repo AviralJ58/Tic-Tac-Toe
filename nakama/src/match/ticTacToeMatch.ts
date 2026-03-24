@@ -2,7 +2,7 @@
 // Implements Nakama MatchHandler interface per AGENT_INIT.md § 5-6
 // Orchestrates authoritative state, delegates pure logic to engine functions
 
-import { MatchGameState, PlayerState, ClientOpcode, ServerOpcode, StateSyncPayload, GameFinishedPayload, MakeMovePayload } from '../types';
+import { MatchGameState, PlayerState, ClientOpcode, ServerOpcode, StateSyncPayload, GameFinishedPayload, MakeMovePayload, PlayerStats } from '../types';
 import * as boardEngine from '../engine/board';
 import * as rulesEngine from '../engine/rules';
 
@@ -163,6 +163,8 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
             gameState.status = 'completed';
             updateMatchLabel(gameState, dispatcher);
 
+            recordMatchOutcome(nk, logger, gameState);
+
             const finishPayload: GameFinishedPayload = {
                 winner: winnerSymbol,
                 board: gameState.board
@@ -238,6 +240,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                     gameState.winner = winner;
                     gameState.status = 'completed';
                     logger.info(`[Match ${ctx.matchId}] Game won by ${winner}`);
+                    recordMatchOutcome(nk, logger, gameState);
                     updateMatchLabel(gameState, dispatcher);
 
                     // Broadcast game finished
@@ -250,6 +253,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                     gameState.winner = 'draw';
                     gameState.status = 'completed';
                     logger.info(`[Match ${ctx.matchId}] Game ended in draw`);
+                    recordMatchOutcome(nk, logger, gameState);
                     updateMatchLabel(gameState, dispatcher);
 
                     // Broadcast game finished
@@ -278,7 +282,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
             }
         } else if (message.opCode === ClientOpcode.LEAVE_MATCH) {
             // Player explicitly leaving
-            handlePlayerDeparture(gameState, message.sender.userId, dispatcher, logger);
+            handlePlayerDeparture(nk, gameState, message.sender.userId, dispatcher, logger);
             broadcastStateSync(gameState, dispatcher, logger);
         }
     }
@@ -301,7 +305,7 @@ export const matchLeave: nkruntime.MatchLeaveFunction = function (
     const gameState = state as MatchGameState;
 
     for (const presence of presences) {
-        handlePlayerDeparture(gameState, presence.userId, dispatcher, logger);
+        handlePlayerDeparture(nk, gameState, presence.userId, dispatcher, logger);
     }
 
     gameState.updatedAt = Date.now();
@@ -314,7 +318,7 @@ export const matchLeave: nkruntime.MatchLeaveFunction = function (
  * Helper: Handle a player leaving explicitly or via disconnect.
  * Forfeits in-progress games, cleans up waiting rooms.
  */
-function handlePlayerDeparture(gameState: MatchGameState, userId: string, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger) {
+function handlePlayerDeparture(nk: nkruntime.Nakama, gameState: MatchGameState, userId: string, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger) {
     const playerEntry = Object.entries(gameState.players).find(([_, p]) => p?.userId === userId);
     if (!playerEntry) return;
 
@@ -326,6 +330,7 @@ function handlePlayerDeparture(gameState: MatchGameState, userId: string, dispat
         gameState.winner = winnerSymbol as 'X' | 'O';
         gameState.status = 'completed';
         logger.info(`[Match ${gameState.matchId}] Player ${userId} forfeited. Game won by ${winnerSymbol}`);
+        recordMatchOutcome(nk, logger, gameState);
         updateMatchLabel(gameState, dispatcher);
 
         const finishPayload = {
@@ -411,4 +416,66 @@ function updateMatchLabel(gameState: MatchGameState, dispatcher: nkruntime.Match
         status: gameState.status,
         updatedAt: gameState.updatedAt
     }));
+}
+
+/**
+ * Helper: Securely records match outcome and computes user stats on game end
+ */
+function recordMatchOutcome(nk: nkruntime.Nakama, logger: nkruntime.Logger, gameState: MatchGameState): void {
+    if (gameState.statsRecorded) return;
+    gameState.statsRecorded = true;
+
+    try {
+        const players = Object.values(gameState.players);
+        for (const player of players) {
+            if (!player) continue;
+
+            const isWinner = gameState.winner === player.symbol;
+            const isDraw = gameState.winner === 'draw';
+            const isLoser = !isWinner && !isDraw;
+
+            let stats: PlayerStats = { wins: 0, losses: 0, draws: 0, gamesPlayed: 0, currentStreak: 0, bestStreak: 0 };
+            
+            // Read previous stats
+            const reads = [{ collection: 'stats', key: gameState.mode, userId: player.userId }];
+            const objects = nk.storageRead(reads);
+            if (objects && objects.length > 0) {
+                stats = objects[0].value as PlayerStats;
+            }
+
+            // Calculate new stats
+            stats.gamesPlayed++;
+            if (isWinner) {
+                stats.wins++;
+                stats.currentStreak++;
+                if (stats.currentStreak > stats.bestStreak) stats.bestStreak = stats.currentStreak;
+            } else if (isLoser) {
+                stats.losses++;
+                stats.currentStreak = 0;
+            } else {
+                stats.draws++;
+                stats.currentStreak = 0;
+            }
+
+            // Write securely back to storage (authoritative only, user cannot mod)
+            nk.storageWrite([{
+                collection: 'stats',
+                key: gameState.mode,
+                userId: player.userId,
+                value: stats,
+                permissionRead: 1, // public read
+                permissionWrite: 0 // owner cannot write
+            }]);
+
+            // Update leaderboard via incr
+            const scoreDelta = isWinner ? 3 : isDraw ? 1 : 0;
+            if (scoreDelta > 0) {
+                const leaderboardId = `tictactoe_${gameState.mode}`;
+                nk.leaderboardRecordWrite(leaderboardId, player.userId, player.username || `Player-${player.userId.substring(0,6)}`, scoreDelta);
+                logger.info(`[Match ${gameState.matchId}] Gave ${player.userId} ${scoreDelta} pts on ${leaderboardId}`);
+            }
+        }
+    } catch (err) {
+        logger.error(`[Match ${gameState.matchId}] Error recording match outcome: ${err}`);
+    }
 }

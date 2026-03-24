@@ -19,6 +19,10 @@ declare namespace nkruntime {
         matchCreate(moduleName: string, params?: any): string;
         matchJoin(matchId: string, userId: string): void;
         matchList(limit: number, authoritative?: boolean, label?: string | null, minSize?: number | null, maxSize?: number | null, query?: string | null): Match[];
+        leaderboardCreate(id: string, authoritative: boolean, sortOrder: string, operator: string, resetSchedule: string | null, metadata?: { [key: string]: any }): void;
+        leaderboardRecordWrite(id: string, ownerId: string, username: string, score: number, subscore?: number, metadata?: { [key: string]: any }): any;
+        storageRead(reads: any[]): any[];
+        storageWrite(writes: any[]): any[];
         [key: string]: any;
     }
 
