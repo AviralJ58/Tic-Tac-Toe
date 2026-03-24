@@ -92,9 +92,9 @@ When the match concludes, the backend script triggers a helper function that sec
 For detailed testing instructions, please refer to the [Testing Documentation](docs/TESTING.md).
 
 ## Deployment Overview
+- **Zero-Config Full Stack deployment:** The entire ecosystem is packaged into `infra/docker-compose.yml`.
 - **Database:** Runs cleanly inside the Docker cluster on your VPS.
-- **Backend:** A Free Tier VPS on **AWS EC2** (`t2.micro`) or **GCP** (`e2-micro`). Runs Nakama & Postgres natively via `docker-compose`. Port `7350` must be exposed.
-- **Secure Tunneling:** Uses `ngrok` running on the VPS to instantly wrap Nakama's port 7350 in an SSL (`https://`) tunnel. This bypasses the Mixed Content blocks imposed by modern browsers, without you needing to buy a domain name.
-- **Frontend:** Deployed for free on **Vercel** or **Netlify** configured with `.env` variables pointing straight to the secure Ngrok tunnel.
+- **Backend:** A Free Tier VPS on **AWS EC2** (`t2.micro`) or **GCP** (`e2-micro`). Runs Nakama natively via Docker. You must explicitly expose Port `7350` in the server's security group.
+- **Frontend:** Automatically statically hosted by an internal **Nginx** container mapped to standard Port `80`. Bypasses Vercel and completely nullifies Cross-Origin (CORS) limits.
 
 For detailed deployment instructions, please refer to the [Deployment Documentation](docs/DEPLOYMENT.md).
