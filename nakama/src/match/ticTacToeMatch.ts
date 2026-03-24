@@ -16,10 +16,11 @@ export const matchInit: nkruntime.MatchInitFunction = function (
     nk: nkruntime.Nakama,
     params: { [key: string]: any }
 ): { state: nkruntime.MatchState; tickRate: number; label: string } {
+    const mode = params.mode === 'timed' ? 'timed' : 'classic';
     const state: MatchGameState = {
         matchId: ctx.matchId,
         status: 'waiting',
-        mode: 'classic',
+        mode: mode,
         board: boardEngine.createBoard(),
         players: {},
         currentTurn: 'X',
@@ -107,6 +108,10 @@ export const matchJoin: nkruntime.MatchJoinFunction = function (
     if (Object.keys(gameState.players).length === 2) {
         gameState.status = 'in_progress';
         gameState.updatedAt = Date.now();
+        if (gameState.mode === 'timed') {
+            gameState.turnStartedAt = Date.now();
+            gameState.turnDeadlineMs = Date.now() + 30000;
+        }
         logger.info(`[Match ${ctx.matchId}] Game started with 2 players`);
 
         // Update match label so listing shows correct status
@@ -143,7 +148,32 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
 ): { state: nkruntime.MatchState } {
     const gameState = state as MatchGameState;
 
-    if (gameState.status !== 'in_progress' || messages.length === 0) {
+    if (gameState.status !== 'in_progress') {
+        return { state: gameState };
+    }
+
+    // Timer enforcement
+    if (gameState.mode === 'timed' && gameState.turnDeadlineMs && Date.now() > gameState.turnDeadlineMs) {
+        const timedOutPlayer = gameState.players[gameState.currentTurn];
+        if (timedOutPlayer) {
+            logger.info(`[Match ${ctx.matchId}] Player ${timedOutPlayer.userId} timed out`);
+            
+            const winnerSymbol = gameState.currentTurn === 'X' ? 'O' : 'X';
+            gameState.winner = winnerSymbol;
+            gameState.status = 'completed';
+            updateMatchLabel(gameState, dispatcher);
+
+            const finishPayload: GameFinishedPayload = {
+                winner: winnerSymbol,
+                board: gameState.board
+            };
+            dispatcher.broadcastMessage(ServerOpcode.GAME_FINISHED, JSON.stringify(finishPayload));
+            broadcastStateSync(gameState, dispatcher, logger);
+            return { state: gameState };
+        }
+    }
+
+    if (messages.length === 0) {
         return { state: gameState };
     }
 
@@ -231,6 +261,10 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                 } else {
                     // Game continues, switch turn
                     gameState.currentTurn = rulesEngine.getNextTurn(gameState.currentTurn);
+                    if (gameState.mode === 'timed') {
+                        gameState.turnStartedAt = Date.now();
+                        gameState.turnDeadlineMs = Date.now() + 30000;
+                    }
                 }
 
                 // Broadcast updated state to all players
@@ -360,7 +394,9 @@ function broadcastStateSync(gameState: MatchGameState, dispatcher: nkruntime.Mat
         players: gameState.players,
         currentTurn: gameState.currentTurn,
         winner: gameState.winner,
-        moveCount: gameState.moveCount
+        moveCount: gameState.moveCount,
+        mode: gameState.mode,
+        turnDeadlineMs: gameState.turnDeadlineMs
     };
     dispatcher.broadcastMessage(ServerOpcode.STATE_SYNC, JSON.stringify(payload));
 }
