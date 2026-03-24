@@ -243,12 +243,9 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                 );
             }
         } else if (message.opCode === ClientOpcode.LEAVE_MATCH) {
-            // Player explicitly leaving - mark as disconnected
-            const leavingPlayer = Object.values(gameState.players).find(p => p.userId === message.sender.userId);
-            if (leavingPlayer) {
-                leavingPlayer.connected = false;
-                logger.info(`[Match ${ctx.matchId}] Player ${message.sender.userId} left explicitly`);
-            }
+            // Player explicitly leaving
+            handlePlayerDeparture(gameState, message.sender.userId, dispatcher, logger);
+            broadcastStateSync(gameState, dispatcher, logger);
         }
     }
 
@@ -256,8 +253,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
 };
 
 /**
- * matchLeave: Handle player disconnect or explicit leave.
- * For MVP, mark as disconnected and continue game.
+ * matchLeave: Handle player disconnect.
  */
 export const matchLeave: nkruntime.MatchLeaveFunction = function (
     ctx: nkruntime.Context,
@@ -271,23 +267,53 @@ export const matchLeave: nkruntime.MatchLeaveFunction = function (
     const gameState = state as MatchGameState;
 
     for (const presence of presences) {
-        const player = Object.values(gameState.players).find(p => p.userId === presence.userId);
-        if (player) {
-            player.connected = false;
-            logger.info(`[Match ${ctx.matchId}] Player ${presence.userId} disconnected`);
-        }
+        handlePlayerDeparture(gameState, presence.userId, dispatcher, logger);
     }
 
     gameState.updatedAt = Date.now();
-
-    // Broadcast updated state with connection status
     broadcastStateSync(gameState, dispatcher, logger);
-
-    // MVP: If both players disconnected for a while, the match will be cleaned up by Nakama's default behavior
-    // For production, implement reconnect grace period or automatic forfeit
 
     return { state: gameState };
 };
+
+/**
+ * Helper: Handle a player leaving explicitly or via disconnect.
+ * Forfeits in-progress games, cleans up waiting rooms.
+ */
+function handlePlayerDeparture(gameState: MatchGameState, userId: string, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger) {
+    const playerEntry = Object.entries(gameState.players).find(([_, p]) => p?.userId === userId);
+    if (!playerEntry) return;
+
+    const [symbol, leavingPlayer] = playerEntry as [string, PlayerState];
+    leavingPlayer.connected = false;
+
+    if (gameState.status === 'in_progress') {
+        const winnerSymbol = symbol === 'X' ? 'O' : 'X';
+        gameState.winner = winnerSymbol as 'X' | 'O';
+        gameState.status = 'completed';
+        logger.info(`[Match ${gameState.matchId}] Player ${userId} forfeited. Game won by ${winnerSymbol}`);
+        updateMatchLabel(gameState, dispatcher);
+
+        const finishPayload = {
+            winner: winnerSymbol,
+            board: gameState.board
+        };
+        dispatcher.broadcastMessage(ServerOpcode.GAME_FINISHED, JSON.stringify(finishPayload));
+    } else if (gameState.status === 'waiting') {
+        if (symbol === 'X') delete gameState.players.X;
+        if (symbol === 'O') delete gameState.players.O;
+        
+        logger.info(`[Match ${gameState.matchId}] Player ${userId} left waiting room`);
+
+        if (Object.keys(gameState.players).length === 0) {
+            gameState.status = 'abandoned';
+            logger.info(`[Match ${gameState.matchId}] Room abandoned`);
+        }
+        updateMatchLabel(gameState, dispatcher);
+    }
+}
+
+
 
 /**
  * matchTerminate: Called when match ends or duration expires.
