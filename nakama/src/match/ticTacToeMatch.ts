@@ -109,6 +109,9 @@ export const matchJoin: nkruntime.MatchJoinFunction = function (
         gameState.updatedAt = Date.now();
         logger.info(`[Match ${ctx.matchId}] Game started with 2 players`);
 
+        // Update match label so listing shows correct status
+        updateMatchLabel(gameState, dispatcher);
+
         // Broadcast game started to all players
         const payload: any = {
             status: 'in_progress'
@@ -145,9 +148,23 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
     }
 
     for (const message of messages) {
-        if (message.code === ClientOpcode.MAKE_MOVE) {
+        if (message.opCode === ClientOpcode.MAKE_MOVE) {
             try {
-                const dataStr = String.fromCharCode.apply(null, message.data as unknown as number[]);
+                // Nakama's goja JS runtime delivers match data as an ArrayBuffer
+                let dataStr: string;
+                if (typeof message.data === 'string') {
+                    dataStr = message.data;
+                } else {
+                    // Convert ArrayBuffer to string via Uint8Array
+                    const bytes = new Uint8Array(message.data as unknown as ArrayBuffer);
+                    const chars: string[] = [];
+                    for (let i = 0; i < bytes.length; i++) {
+                        chars.push(String.fromCharCode(bytes[i]));
+                    }
+                    dataStr = chars.join('');
+                }
+
+                logger.info(`[Match ${ctx.matchId}] Parsing move: ${dataStr}`);
                 const moveData: MakeMovePayload = JSON.parse(dataStr);
                 const position = moveData.position;
 
@@ -191,6 +208,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                     gameState.winner = winner;
                     gameState.status = 'completed';
                     logger.info(`[Match ${ctx.matchId}] Game won by ${winner}`);
+                    updateMatchLabel(gameState, dispatcher);
 
                     // Broadcast game finished
                     const finishPayload: GameFinishedPayload = {
@@ -202,6 +220,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                     gameState.winner = 'draw';
                     gameState.status = 'completed';
                     logger.info(`[Match ${ctx.matchId}] Game ended in draw`);
+                    updateMatchLabel(gameState, dispatcher);
 
                     // Broadcast game finished
                     const finishPayload: GameFinishedPayload = {
@@ -223,7 +242,7 @@ export const matchLoop: nkruntime.MatchLoopFunction = function (
                     JSON.stringify({ message: 'Server error processing move' })
                 );
             }
-        } else if (message.code === ClientOpcode.LEAVE_MATCH) {
+        } else if (message.opCode === ClientOpcode.LEAVE_MATCH) {
             // Player explicitly leaving - mark as disconnected
             const leavingPlayer = Object.values(gameState.players).find(p => p.userId === message.sender.userId);
             if (leavingPlayer) {
@@ -318,4 +337,16 @@ function broadcastStateSync(gameState: MatchGameState, dispatcher: nkruntime.Mat
         moveCount: gameState.moveCount
     };
     dispatcher.broadcastMessage(ServerOpcode.STATE_SYNC, JSON.stringify(payload));
+}
+
+/**
+ * Helper: Update match label to reflect current status
+ * This ensures findOrCreateMatch / listRooms see correct match state
+ */
+function updateMatchLabel(gameState: MatchGameState, dispatcher: nkruntime.MatchDispatcher): void {
+    dispatcher.matchLabelUpdate(JSON.stringify({
+        mode: gameState.mode,
+        status: gameState.status,
+        updatedAt: gameState.updatedAt
+    }));
 }

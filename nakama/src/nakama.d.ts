@@ -40,9 +40,9 @@ declare namespace nkruntime {
     }
 
     interface MatchMessage {
-        code: number;
+        opCode: number;
         sender: Presence;
-        data: Uint8Array;
+        data: string;
     }
 
     interface MatchDispatcher {
