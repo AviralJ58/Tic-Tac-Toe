@@ -3,26 +3,13 @@
 // Centralized Nakama service layer
 // All Nakama client/socket logic lives here — no Nakama imports in components
 
-// Bypass Ngrok's free-tier HTML warning that intercepts GET requests (Leaderboards/Stats)
-if (typeof window !== 'undefined') {
-  const originalFetch = window.fetch;
-  window.fetch = async function (...args) {
-    const [resource, config] = args;
-    const newConfig = config || {};
-    newConfig.headers = {
-      ...newConfig.headers,
-      'ngrok-skip-browser-warning': 'true'
-    };
-    return originalFetch(resource, newConfig);
-  };
-}
-
 import { Client, Session, Socket } from '@heroiclabs/nakama-js';
 import { CreateRoomResponse, ClientOpcode, ServerOpcode, StateSyncPayload, GameFinishedPayload, ErrorPayload } from '../types';
 import { useGameStore } from '../store/gameStore';
 
-// Fallback to localhost if environment variables are not supplied
-const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || '127.0.0.1';
+// Fallback to exactly wherever the HTML was served from (the EC2 instance's IP address)
+const FALLBACK_HOST = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || FALLBACK_HOST;
 const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '7350';
 const NAKAMA_USE_SSL = import.meta.env.VITE_NAKAMA_USE_SSL === 'true';
 const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'defaultkey';

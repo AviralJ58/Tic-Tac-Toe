@@ -39,5 +39,13 @@ services:
       - "7349:7349"
       - "7351:7351"
 
+  frontend:
+    image: nginx:alpine
+    container_name: tictactoe-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ../frontend/dist:/usr/share/nginx/html:ro
+
 volumes:
   postgres_data:
