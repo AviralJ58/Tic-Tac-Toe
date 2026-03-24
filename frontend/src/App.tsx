@@ -3,6 +3,8 @@ import NicknameScreen from './screens/NicknameScreen';
 import FindingScreen from './screens/FindingScreen';
 import GameScreen from './screens/GameScreen';
 import ResultScreen from './screens/ResultScreen';
+import LeaderboardScreen from './screens/LeaderboardScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 import LobbyScreen from './screens/LobbyScreen';
 
@@ -12,6 +14,8 @@ const screens = {
   finding: FindingScreen,
   game: GameScreen,
   result: ResultScreen,
+  leaderboard: LeaderboardScreen,
+  profile: ProfileScreen,
 } as const;
 
 export default function App() {

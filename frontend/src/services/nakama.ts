@@ -285,3 +285,30 @@ function handleMatchData(matchData: any): void {
     console.error('[Nakama] Error handling match data:', e);
   }
 }
+
+/** Leaderboards and Stats */
+export async function fetchLeaderboard(mode: import('../types').GameMode): Promise<import('../types').LeaderboardRecord[]> {
+  if (!session || !client) throw new Error('Not authenticated');
+  const result = await client.listLeaderboardRecords(session, `tictactoe_${mode}`, undefined, 100);
+  return (result.records || []).map(r => ({
+    ownerId: r.owner_id || '',
+    username: r.username || 'Unknown',
+    score: Number(r.score) || 0,
+    rank: Number(r.rank) || 0
+  }));
+}
+
+export async function fetchMyStats(mode: import('../types').GameMode): Promise<import('../types').PlayerStats | null> {
+  if (!session || !client) throw new Error('Not authenticated');
+  const result = await client.readStorageObjects(session, {
+    object_ids: [{
+      collection: 'stats',
+      key: mode,
+      user_id: session.user_id
+    }]
+  });
+  if (result.objects && result.objects.length > 0) {
+    return result.objects[0].value as import('../types').PlayerStats;
+  }
+  return null;
+}

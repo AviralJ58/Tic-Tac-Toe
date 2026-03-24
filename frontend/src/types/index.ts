@@ -73,5 +73,22 @@ export interface ListRoomsResponse {
   error?: string;
 }
 
+/** Persistent Player Stats */
+export interface PlayerStats {
+  wins: number;
+  losses: number;
+  draws: number;
+  gamesPlayed: number;
+  currentStreak: number;
+  bestStreak: number;
+}
+
+export interface LeaderboardRecord {
+  ownerId: string;
+  username: string;
+  score: number;
+  rank: number;
+}
+
 /** UI screen flow */
-export type Screen = 'nickname' | 'lobby' | 'finding' | 'game' | 'result';
+export type Screen = 'nickname' | 'lobby' | 'finding' | 'game' | 'result' | 'leaderboard' | 'profile';
