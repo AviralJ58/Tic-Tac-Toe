@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-bg text-white font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer components {
+  .screen {
+    @apply flex-1 flex flex-col items-center justify-center px-6 py-8;
+    min-height: 100dvh;
+  }
+
+  .card {
+    @apply bg-surface-card rounded-2xl p-6 shadow-lg;
+  }
+
+  .btn-primary {
+    @apply w-full py-4 rounded-xl font-semibold text-lg
+           bg-brand-600 hover:bg-brand-500 active:bg-brand-700
+           text-white transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-4 rounded-xl text-lg text-center font-medium
+           bg-surface-elevated border border-white/10
+           text-white placeholder-white/30
+           focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500
+           transition-colors duration-150;
+  }
+
+  .cell {
+    @apply aspect-square flex items-center justify-center
+           rounded-xl text-4xl sm:text-5xl font-extrabold
+           bg-surface-elevated border border-white/10
+           transition-all duration-150 select-none;
+  }
+
+  .cell-interactive {
+    @apply hover:bg-surface-card hover:border-brand-500/40 cursor-pointer active:scale-95;
+  }
+
+  .cell-x {
+    @apply text-brand-400;
+  }
+
+  .cell-o {
+    @apply text-rose-400;
+  }
+}

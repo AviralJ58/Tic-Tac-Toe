@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useGameStore } from './store/gameStore';
+import NicknameScreen from './screens/NicknameScreen';
+import FindingScreen from './screens/FindingScreen';
+import GameScreen from './screens/GameScreen';
+import ResultScreen from './screens/ResultScreen';
 
-function App() {
-  const [message] = useState('Welcome to Multiplayer Tic-Tac-Toe');
+const screens = {
+  nickname: NicknameScreen,
+  finding: FindingScreen,
+  game: GameScreen,
+  result: ResultScreen,
+} as const;
+
+export default function App() {
+  const screen = useGameStore((s) => s.screen);
+  const isConnected = useGameStore((s) => s.isConnected);
+  const Screen = screens[screen];
 
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-      <h1>{message}</h1>
-      <p>Game UI and Nakama integration will be implemented next.</p>
-    </div>
+    <>
+      {/* Connection indicator */}
+      {screen !== 'nickname' && !isConnected && (
+        <div className="fixed top-0 inset-x-0 bg-red-500/90 text-white text-xs text-center py-1 z-50">
+          Disconnected — reconnecting...
+        </div>
+      )}
+      <Screen />
+    </>
   );
 }
-
-export default App;
