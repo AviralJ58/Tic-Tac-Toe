@@ -47,6 +47,7 @@ interface GameStore {
 
   // Reset for new game
   resetMatch: () => void;
+  logout: () => void;
 }
 
 const initialMatchState = {
@@ -130,4 +131,5 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // Reset
   resetMatch: () => set({ ...initialMatchState }),
+  logout: () => set({ userId: null, nickname: '', ...initialMatchState }),
 }));

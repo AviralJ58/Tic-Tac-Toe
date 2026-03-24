@@ -27,19 +27,16 @@ function getClient(): Client {
   return client;
 }
 
-function getOrCreateDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
+function getOrCreateDeviceId(nickname: string): string {
+  // Using the nickname as the core identifier ensures switching nicknames correctly drops you into a distinct new Nakama user account locally.
+  return `device_${nickname}`;
 }
 
 /** Clear saved session from localStorage */
 function clearSession(): void {
   localStorage.removeItem(SESSION_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(DEVICE_ID_KEY);
   session = null;
 }
 
@@ -47,7 +44,7 @@ function clearSession(): void {
 export async function authenticate(nickname: string): Promise<void> {
   const store = useGameStore.getState();
   const c = getClient();
-  const deviceId = getOrCreateDeviceId();
+  const deviceId = getOrCreateDeviceId(nickname);
 
   // Try restoring an existing session first
   const existingToken = localStorage.getItem(SESSION_TOKEN_KEY);
@@ -59,16 +56,25 @@ export async function authenticate(nickname: string): Promise<void> {
       // Add a 5-minute buffer so we don't use tokens that are about to expire
       const nowWithBuffer = Date.now() / 1000 + 300;
       if (!restored.isexpired(nowWithBuffer)) {
-        session = restored;
-        store.setAuth(session.user_id!, nickname);
-        localStorage.setItem(NICKNAME_KEY, nickname);
-        return;
+        // If the cached session belongs to a different username than requested, invalidate it!
+        if (restored.username && restored.username !== nickname) {
+          clearSession();
+        } else {
+          session = restored;
+          // Use the server-validated username instead of blindly trusting input
+          const finalNickname = restored.username || nickname;
+          store.setAuth(session.user_id!, finalNickname);
+          localStorage.setItem(NICKNAME_KEY, finalNickname);
+          return;
+        }
       }
     } catch (e) {
       console.warn('[Nakama] Failed to restore session, re-authenticating:', e);
     }
-    // If we reach here, the stored session is stale/invalid — clear it
-    clearSession();
+    // If we reach here, the stored session is stale/invalid/mismatched — clear it
+    if (localStorage.getItem(SESSION_TOKEN_KEY)) {
+        clearSession();
+    }
   }
 
   // Fresh auth
@@ -231,6 +237,7 @@ export function disconnect(): void {
     socket = null;
   }
   currentMatchId = null;
+  clearSession();
 }
 
 /** Get saved nickname from localStorage */

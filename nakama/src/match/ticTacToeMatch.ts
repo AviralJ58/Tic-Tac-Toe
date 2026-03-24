@@ -301,11 +301,16 @@ export const matchLeave: nkruntime.MatchLeaveFunction = function (
     tick: number,
     state: nkruntime.MatchState,
     presences: nkruntime.Presence[]
-): { state: nkruntime.MatchState } {
+): { state: nkruntime.MatchState } | any {
     const gameState = state as MatchGameState;
 
     for (const presence of presences) {
         handlePlayerDeparture(nk, gameState, presence.userId, dispatcher, logger);
+    }
+
+    if (gameState.status === 'abandoned') {
+        logger.info(`[Match ${ctx.matchId}] Terminating empty abandoned matchmaking room`);
+        return null as any; // Signals Nakama runtime to destroy the match state entirely
     }
 
     gameState.updatedAt = Date.now();

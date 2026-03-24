@@ -98,6 +98,7 @@ export default function LobbyScreen() {
 
   const handleLogout = useCallback(() => {
     disconnect();
+    useGameStore.getState().logout();
     setScreen('nickname');
   }, [setScreen]);
 

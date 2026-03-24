@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { leaveMatch, disconnect } from '../services/nakama';
+import { leaveMatch } from '../services/nakama';
 
 export default function FindingScreen() {
   const setScreen = useGameStore((s) => s.setScreen);
@@ -9,9 +9,8 @@ export default function FindingScreen() {
 
   const handleCancel = useCallback(async () => {
     await leaveMatch();
-    disconnect();
     resetMatch();
-    setScreen('nickname');
+    setScreen('lobby');
   }, [setScreen, resetMatch]);
 
   return (
