@@ -121,11 +121,10 @@ export async function connectSocket(): Promise<void> {
   }
 }
 
-/** Find or create a match via server-side RPC */
+/** Find or create a match via server-side RPC (Quick Match logic) */
 export async function findMatch(nickname: string): Promise<string> {
   if (!session || !client) throw new Error('Not authenticated');
 
-  const payload = JSON.stringify({ nickname });
   const rpcResponse = await client.rpc(session, 'findOrCreateMatch', { nickname });
   
   let result: CreateRoomResponse;
@@ -138,6 +137,46 @@ export async function findMatch(nickname: string): Promise<string> {
 
   if (!result.success || !result.matchId) {
     throw new Error(result.error || 'Failed to find/create match');
+  }
+
+  return result.matchId;
+}
+
+/** List waiting matches via server-side RPC */
+export async function listRooms(): Promise<import('../types').WaitingRoom[]> {
+  if (!session || !client) throw new Error('Not authenticated');
+
+  const rpcResponse = await client.rpc(session, 'listRooms', {});
+  
+  let result: import('../types').ListRoomsResponse;
+  if (typeof rpcResponse.payload === 'string') {
+    result = JSON.parse(rpcResponse.payload);
+  } else {
+    result = rpcResponse.payload as unknown as import('../types').ListRoomsResponse;
+  }
+
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to list rooms');
+  }
+
+  return result.rooms;
+}
+
+/** Create a match manually via server-side RPC */
+export async function createRoom(roomName: string): Promise<string> {
+  if (!session || !client) throw new Error('Not authenticated');
+
+  const rpcResponse = await client.rpc(session, 'createRoom', { roomName });
+  
+  let result: CreateRoomResponse;
+  if (typeof rpcResponse.payload === 'string') {
+    result = JSON.parse(rpcResponse.payload);
+  } else {
+    result = rpcResponse.payload as unknown as CreateRoomResponse;
+  }
+
+  if (!result.success || !result.matchId) {
+    throw new Error(result.error || 'Failed to create room');
   }
 
   return result.matchId;

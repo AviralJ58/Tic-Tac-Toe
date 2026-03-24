@@ -4,8 +4,11 @@ import FindingScreen from './screens/FindingScreen';
 import GameScreen from './screens/GameScreen';
 import ResultScreen from './screens/ResultScreen';
 
+import LobbyScreen from './screens/LobbyScreen';
+
 const screens = {
   nickname: NicknameScreen,
+  lobby: LobbyScreen,
   finding: FindingScreen,
   game: GameScreen,
   result: ResultScreen,

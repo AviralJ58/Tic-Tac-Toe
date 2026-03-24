@@ -46,9 +46,8 @@ export default function ResultScreen() {
 
   const handleHome = useCallback(async () => {
     await leaveMatch();
-    disconnect();
     resetMatch();
-    setScreen('nickname');
+    setScreen('lobby');
   }, [resetMatch, setScreen]);
 
   return (

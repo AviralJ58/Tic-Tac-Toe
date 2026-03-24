@@ -23,16 +23,8 @@ export default function NicknameScreen() {
       // 2. Connect socket
       await connectSocket();
 
-      // 3. Switch to finding screen
-      setScreen('finding');
-
-      // 4. Find or create a match (server decides)
-      const matchId = await findMatch(nickname);
-
-      // 5. Join the match via WebSocket
-      await joinMatch(matchId);
-
-      // Now waiting for opponent (or game starts immediately if room was waiting)
+      // 3. Switch to lobby screen
+      setScreen('lobby');
     } catch (err: any) {
       console.error('[NicknameScreen] Error:', err);
       setError(err.message || 'Something went wrong');

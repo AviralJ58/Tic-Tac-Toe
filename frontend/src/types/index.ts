@@ -56,5 +56,20 @@ export interface CreateRoomResponse {
   error?: string;
 }
 
+export interface WaitingRoom {
+  matchId: string;
+  name: string;
+  mode: GameMode;
+  visibility: 'public' | 'private';
+  playerCount: number;
+  createdAt: number;
+}
+
+export interface ListRoomsResponse {
+  success: boolean;
+  rooms: WaitingRoom[];
+  error?: string;
+}
+
 /** UI screen flow */
-export type Screen = 'nickname' | 'finding' | 'game' | 'result';
+export type Screen = 'nickname' | 'lobby' | 'finding' | 'game' | 'result';

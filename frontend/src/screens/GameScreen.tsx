@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { sendMove } from '../services/nakama';
+import { sendMove, leaveMatch } from '../services/nakama';
 import Board from '../components/Board';
 
 export default function GameScreen() {
@@ -10,6 +10,9 @@ export default function GameScreen() {
   const playerSymbol = useGameStore((s) => s.playerSymbol);
   const status = useGameStore((s) => s.status);
   const error = useGameStore((s) => s.error);
+  const resetMatch = useGameStore((s) => s.resetMatch);
+  const setScreen = useGameStore((s) => s.setScreen);
+  const [leaving, setLeaving] = useState(false);
 
   const isMyTurn = currentTurn === playerSymbol;
   const isGameActive = status === 'in_progress';
@@ -20,6 +23,14 @@ export default function GameScreen() {
   const handleCellClick = useCallback((index: number) => {
     sendMove(index);
   }, []);
+
+  const handleLeave = useCallback(async () => {
+    if (!window.confirm('Are you sure you want to forfeit this match?')) return;
+    setLeaving(true);
+    await leaveMatch();
+    resetMatch();
+    setScreen('lobby');
+  }, [resetMatch, setScreen]);
 
   return (
     <div className="screen">
@@ -62,6 +73,16 @@ export default function GameScreen() {
         {error && (
           <p className="text-red-400 text-sm text-center">{error}</p>
         )}
+
+        <div className="pt-4 flex justify-center">
+          <button 
+            onClick={handleLeave} 
+            disabled={leaving}
+            className="text-white/30 hover:text-red-400 text-sm font-medium transition-colors underline underline-offset-4"
+          >
+            {leaving ? 'Leaving...' : 'Forfeit Match'}
+          </button>
+        </div>
       </div>
     </div>
   );
